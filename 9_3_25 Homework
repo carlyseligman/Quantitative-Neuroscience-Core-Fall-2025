@@ -1,0 +1,70 @@
+Excercise #1:
+# Parameters
+sample_size = 1000
+prevalence = 0.01  # 1% of population has HIV
+sensitivity = 1.0  # No false negatives
+false_positive_rate = 0.05  # 5%
+specificity = 1 - false_positive_rate
+
+# People with and without HIV
+people_with_hiv = sample_size * prevalence
+people_without_hiv = sample_size - people_with_hiv
+
+# Test results
+true_positives = people_with_hiv * sensitivity
+false_positives = people_without_hiv * false_positive_rate
+
+# Total positive tests
+total_positives = true_positives + false_positives
+
+# Probability someone actually has HIV given a positive test
+posterior_prob = true_positives / total_positives
+
+# Output results
+print(f"Out of {sample_size} people:")
+print(f" - People with HIV: {people_with_hiv}")
+print(f" - True positives: {true_positives}")
+print(f" - False positives: {false_positives}")
+print(f" - Total positive tests: {total_positives}")
+print(f" => Probability that a person has HIV given a positive test: {posterior_prob:.4f}")
+
+# Statistical significance test
+if posterior_prob > 0.95:
+    print("✅ This is statistically significant at the p < 0.05 level.")
+else:
+    print("❌ This is NOT statistically significant at the p < 0.05 level.")
+
+Excercise #2:
+# Parameters
+sample_size = 1000
+sensitivity = 1.0  # No false negatives
+false_positive_rate = 0.05  # 5%
+specificity = 1 - false_positive_rate
+
+print("Prevalence\tPosterior P(HIV|Positive)\tStatistically Significant?")
+print("-" * 60)
+
+# Loop through prevalence from 0 to 1 in steps of 0.1
+for prevalence in [i / 10 for i in range(11)]:
+    # Calculate how many people have/don't have HIV
+    people_with_hiv = sample_size * prevalence
+    people_without_hiv = sample_size - people_with_hiv
+
+    # Calculate true positives and false positives
+    true_positives = people_with_hiv * sensitivity
+    false_positives = people_without_hiv * false_positive_rate
+
+    # Total positive test results
+    total_positives = true_positives + false_positives
+
+    # Avoid division by zero
+    if total_positives == 0:
+        posterior_prob = 0
+    else:
+        posterior_prob = true_positives / total_positives
+
+    # Statistical significance
+    significant = "✅ Yes" if posterior_prob > 0.95 else "❌ No"
+
+    # Print results
+    print(f"{prevalence:.1f}\t\t{posterior_prob:.4f}\t\t\t{significant}")
