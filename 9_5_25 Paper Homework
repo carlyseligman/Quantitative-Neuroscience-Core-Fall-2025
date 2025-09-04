@@ -1,0 +1,38 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+# Generate log-spaced x values from slightly below 0.01 to slightly above 10 Hz
+x = np.logspace(-2.2, 0.1, 1000)
+
+# Convert x to log10 space for Gaussian calculation
+log_x = np.log10(x)
+
+# Mean and standard deviation in log10 space
+mean_log = -1          # log10(0.1 Hz)
+std_dev = 0.3          # Same std dev for both Gaussians
+
+# Compute both Gaussians (they will be identical now)
+gaussian1 = norm.pdf(log_x, loc=mean_log, scale=std_dev)
+gaussian1 /= gaussian1.max()
+
+gaussian2 = norm.pdf(log_x, loc=mean_log, scale=std_dev)
+gaussian2 /= gaussian2.max()
+
+# Plotting
+plt.figure(figsize=(10, 6))
+plt.plot(x, gaussian1, label='Gaussian 1 (μ = 0.1 Hz, σ = 0.3)', color='blue')
+plt.plot(x, gaussian2, label='Gaussian 2 (μ = 0.1 Hz, σ = 0.3)', color='green', linestyle='--')
+
+# Logarithmic x-axis and formatting
+plt.xscale('log')
+plt.xlim(0.007, 12)
+plt.ylim(0, 1.05)
+plt.xlabel('Firing Rate (Hz)')
+plt.ylabel('Percent (normalized)')
+plt.yticks([0, 0.5, 1])
+plt.title('Identical Gaussian Distributions Centered at 0.1 Hz')
+plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+plt.legend()
+plt.tight_layout()
+plt.show()
