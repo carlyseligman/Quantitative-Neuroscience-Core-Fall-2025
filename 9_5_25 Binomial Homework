@@ -1,0 +1,100 @@
+Excercise 1:
+from scipy.stats import binom
+
+# Parameters
+n = 10       # number of quanta available
+p = 0.2      # probability of release per quantum
+
+# Calculate probabilities for 0 to 10 quanta released
+probs = [binom.pmf(k, n, p) for k in range(n+1)]
+
+for k, prob in enumerate(probs):
+    print(f"Probability of releasing {k} quanta: {prob:.4f}")
+
+Excercise 2:
+import numpy as np
+
+n = 14
+k = 8
+ps = np.arange(0.1, 1.01, 0.1)  # from 0.1 to 1.0 in steps of 0.1
+
+likelihoods = [binom.pmf(k, n, p) for p in ps]
+
+for p, lik in zip(ps, likelihoods):
+    print(f"Likelihood of p={p:.1f} given k={k}: {lik:.6f}")
+
+max_p = ps[np.argmax(likelihoods)]
+print(f"Most likely p given k={k} is {max_p:.1f} (max likelihood)")
+
+Excercise 3:
+import math
+
+k_values = [8, 5]
+n = 14
+ps = np.arange(0, 1.01, 0.1)  # from 0 to 1 in steps of 0.1
+
+total_likelihoods = []
+total_log_likelihoods = []
+
+for p in ps:
+    likelihoods = [binom.pmf(k, n, p) for k in k_values]
+    total_likelihood = np.prod(likelihoods)
+    # Log likelihood (sum of logs)
+    total_log_likelihood = np.sum([math.log(l) if l > 0 else -np.inf for l in likelihoods])
+    total_likelihoods.append(total_likelihood)
+    total_log_likelihoods.append(total_log_likelihood)
+    print(f"p={p:.1f}, total likelihood={total_likelihood:.8f}, total log-likelihood={total_log_likelihood:.4f}")
+
+max_p = ps[np.argmax(total_likelihoods)]
+print(f"Maximum likelihood p: {max_p:.1f}")
+
+Excercise 4: 
+# Given data
+counts = {
+    0:0, 1:0, 2:3, 3:7, 4:10, 5:19, 6:26, 7:16, 8:16, 9:5, 10:5, 11:0, 12:0, 13:0, 14:0
+}
+n = 14
+
+ps = np.arange(0, 1.01, 0.01)
+
+# Calculate likelihood for each p as product of binomial pmfs raised to the count power (likelihood of all data)
+likelihoods = []
+
+for p in ps:
+    # log likelihood sum for numerical stability
+    log_likelihood = 0
+    for k, count in counts.items():
+        if count > 0:
+            pmf = binom.pmf(k, n, p)
+            if pmf == 0:
+                log_likelihood = -np.inf
+                break
+            log_likelihood += count * np.log(pmf)
+    likelihoods.append(np.exp(log_likelihood) if log_likelihood > -np.inf else 0)
+
+max_p = ps[np.argmax(likelihoods)]
+print(f"Maximum likelihood estimate p-hat: {max_p:.2f}")
+
+Excercise 5:
+k = 7
+n = 14
+p_null = 0.3
+
+prob = binom.pmf(k, n, p_null)
+print(f"Probability of observing {k} quanta with p={p_null}: {prob:.6f}")
+
+# Optional: two-tailed p-value for testing if observed count is extreme
+# Sum of probabilities of outcomes as or more extreme than observed
+
+# Compute cumulative probabilities for less or equal to 7 and greater or equal to 7
+cdf_lower = binom.cdf(k, n, p_null)
+cdf_upper = 1 - binom.cdf(k-1, n, p_null)
+
+p_value = 2 * min(cdf_lower, cdf_upper)  # two-sided p-value
+
+print(f"Two-tailed p-value for observing {k} quanta or more extreme: {p_value:.4f}")
+
+if p_value < 0.05:
+    print("Reject the null hypothesis: temperature likely had an effect.")
+else:
+    print("Fail to reject the null hypothesis: no evidence that temperature affected release probability.")
