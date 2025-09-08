@@ -1,0 +1,45 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import poisson
+
+# Parameters
+mu = 100  # Mean spike count
+n_samples = 10000  # Number of simulated trials
+x_min, x_max = 60, 140
+
+# Simulate spike counts using Poisson distribution
+spike_counts = np.random.poisson(mu, n_samples)
+
+# Create histogram
+bins = np.arange(x_min, x_max + 1)
+hist_counts, _, _ = plt.hist(
+    spike_counts, bins=bins, density=False,
+    alpha=0.6, color='skyblue', edgecolor='black', label='Spike Count Histogram'
+)
+
+# Convert histogram to percentage
+hist_percent = 100 * hist_counts / n_samples
+
+# Plot histogram again as a bar plot with percentage
+plt.clf()  # Clear the previous plot to overlay properly
+plt.bar(bins[:-1], hist_percent, width=1, color='skyblue', edgecolor='black', alpha=0.6, label='Spike Count Histogram')
+
+# Poisson PMF
+x = np.arange(x_min, x_max + 1)
+poisson_pmf = poisson.pmf(x, mu) * 100  # Convert to percentage
+
+# Overlay Poisson distribution
+plt.plot(x, poisson_pmf, 'r-', lw=2, label=f'Poisson PMF (μ={mu})')
+
+# Axes and labels
+plt.xlim(x_min, x_max)
+plt.ylim(0, 6)
+plt.xlabel('Spike Count')
+plt.ylabel('Probability (%)')
+plt.title('Spike Count Histogram with Poisson Fit')
+plt.legend()
+plt.grid(True)
+
+# Show plot
+plt.tight_layout()
+plt.show()
