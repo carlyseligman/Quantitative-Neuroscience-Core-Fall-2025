@@ -1,0 +1,23 @@
+import matplotlib.pyplot as plt
+
+# Calculate interval widths
+df_results['Z Width'] = df_results['Z Interval'].apply(lambda x: x[1] - x[0])
+df_results['T Width'] = df_results['T Interval'].apply(lambda x: x[1] - x[0])
+df_results['Bootstrap Width'] = df_results['Bootstrap Interval'].apply(lambda x: x[1] - x[0])
+df_results['Bayesian Width'] = df_results['Bayesian Interval'].apply(lambda x: x[1] - x[0])
+
+# Plot interval widths
+plt.figure(figsize=(10, 6))
+plt.plot(df_results.index, df_results['Z Width'], label='Z-score Interval', marker='o')
+plt.plot(df_results.index, df_results['T Width'], label='T-distribution Interval', marker='s')
+plt.plot(df_results.index, df_results['Bootstrap Width'], label='Bootstrap Interval', marker='^')
+plt.plot(df_results.index, df_results['Bayesian Width'], label='Bayesian Interval', marker='x')
+
+plt.title('95% Interval Widths vs. Sample Size')
+plt.xlabel('Sample Size (n)')
+plt.ylabel('Interval Width')
+plt.legend()
+plt.grid(True)
+plt.xscale('log')  # Log scale to better show trends
+plt.tight_layout()
+plt.show()
