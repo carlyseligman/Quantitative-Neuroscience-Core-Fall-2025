@@ -1,0 +1,55 @@
+import numpy as np
+import scipy.stats as stats
+import pandas as pd
+
+# Parameters
+mu = 10
+sigma = 2
+confidence_level = 0.95
+alpha = 1 - confidence_level
+sample_sizes = [5, 10, 20, 40, 80, 160, 1000]
+bootstrap_iterations = 10000
+
+# Function to compute confidence and credible intervals
+def compute_intervals(n, seed=42):
+    np.random.seed(seed)
+    sample = np.random.normal(mu, sigma, n)
+    x_bar = np.mean(sample)
+    s = np.std(sample, ddof=1)
+    
+    # Z-score interval (known sigma)
+    z = stats.norm.ppf(1 - alpha / 2)
+    z_interval = (x_bar - z * sigma / np.sqrt(n), x_bar + z * sigma / np.sqrt(n))
+    
+    # T-distribution interval (unknown sigma)
+    t = stats.t.ppf(1 - alpha / 2, df=n - 1)
+    t_interval = (x_bar - t * s / np.sqrt(n), x_bar + t * s / np.sqrt(n))
+    
+    # Bootstrap interval
+    bootstrap_means = np.random.choice(sample, (bootstrap_iterations, n), replace=True).mean(axis=1)
+    bootstrap_interval = (np.percentile(bootstrap_means, 2.5), np.percentile(bootstrap_means, 97.5))
+    
+    # Bayesian credible interval (with vague prior)
+    bayes_mean = x_bar
+    bayes_std = sigma / np.sqrt(n)
+    bayes_interval = (
+        stats.norm.ppf(0.025, loc=bayes_mean, scale=bayes_std),
+        stats.norm.ppf(0.975, loc=bayes_mean, scale=bayes_std)
+    )
+    
+    return {
+        'n': n,
+        'Sample Mean': x_bar,
+        'Z Interval': z_interval,
+        'T Interval': t_interval,
+        'Bootstrap Interval': bootstrap_interval,
+        'Bayesian Interval': bayes_interval
+    }
+
+# Run for all sample sizes
+results = [compute_intervals(n) for n in sample_sizes]
+
+# Display as table
+df_results = pd.DataFrame(results).set_index('n')
+pd.set_option('display.max_colwidth', None)
+print(df_results.round(4))
