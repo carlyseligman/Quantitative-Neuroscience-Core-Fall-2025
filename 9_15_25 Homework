@@ -1,0 +1,66 @@
+# Sample-size calculations for correlation (Fisher z) and two-sample t-test (Cohen's d)
+from math import sqrt
+import numpy as np
+import pandas as pd
+from scipy import stats
+from statsmodels.stats.power import TTestIndPower
+import matplotlib.pyplot as plt
+
+# Parameters
+alpha = 0.05
+power_target = 0.80
+r_values = np.linspace(0.05, 0.5, 10)   # adjust as needed
+d_values = np.linspace(0.1, 1.0, 10)     # adjust as needed
+
+z_alpha2 = stats.norm.ppf(1 - alpha/2)
+z_power = stats.norm.ppf(power_target)
+
+# Fisher z-based required total N for correlation r (two-sided, H0: r=0)
+def required_n_for_r(r, alpha=alpha, power=power_target):
+    if abs(r) < 1e-8:
+        return float('nan')
+    z_alpha2 = stats.norm.ppf(1 - alpha/2)
+    z_power = stats.norm.ppf(power)
+    delta = 0.5 * np.log((1 + r) / (1 - r))  # atanh(r)
+    n = 3 + ((z_alpha2 + z_power) / delta) ** 2
+    return int(np.ceil(n))
+
+# Two-sample t-test (equal n per group) using statsmodels
+tt_ind = TTestIndPower()
+def required_n_for_d(d, alpha=alpha, power=power_target):
+    if d <= 0:
+        return float('nan')
+    n_per_group = tt_ind.solve_power(effect_size=d, alpha=alpha, power=power, alternative='two-sided')
+    return int(np.ceil(n_per_group))
+
+# Compute and store results
+corr_results = [{'r': round(r,3), 'required_N_total': required_n_for_r(r)} for r in r_values]
+t_results = [{'d': round(d,3), 'n_per_group': required_n_for_d(d), 'N_total': required_n_for_d(d)*2} for d in d_values]
+
+df_corr = pd.DataFrame(corr_results)
+df_t = pd.DataFrame(t_results)
+
+# Print and/or save
+print(df_corr)
+print(df_t)
+df_corr.to_csv('correlation_sample_sizes.csv', index=False)
+df_t.to_csv('two_sample_ttest_sample_sizes.csv', index=False)
+
+# Plotting (matplotlib; no custom colors)
+plt.figure(figsize=(8,4))
+plt.plot(df_corr['r'], df_corr['required_N_total'], marker='o')
+plt.xlabel('Pearson r (effect size)')
+plt.ylabel('Required total N (alpha=0.05, power=0.8)')
+plt.title('Required total N vs Pearson r (Fisher z approx)')
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(8,4))
+plt.plot(df_t['d'], df_t['n_per_group'], marker='o')
+plt.xlabel("Cohen's d (effect size)")
+plt.ylabel('Required n per group (alpha=0.05, power=0.8)')
+plt.title("Required n per group vs Cohen's d")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
