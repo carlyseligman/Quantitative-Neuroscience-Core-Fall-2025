@@ -1,0 +1,79 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import ttest_ind
+from statsmodels.stats.multitest import multipletests
+
+# Parameters
+n_sim = 1000       # number of simulations
+n_per_group = 30   # sample size per group
+alpha = 0.05
+
+# --- 1. Simulate under the NULL (equal means) ---
+np.random.seed(42)
+p_values_null = []
+
+for _ in range(n_sim):
+    sample1 = np.random.normal(loc=0, scale=1, size=n_per_group)
+    sample2 = np.random.normal(loc=0, scale=1, size=n_per_group)
+    _, p_val = ttest_ind(sample1, sample2)
+    p_values_null.append(p_val)
+
+p_values_null = np.array(p_values_null)
+print("1. Under the NULL (equal means):")
+print(f"   Proportion significant (uncorrected): {np.mean(p_values_null < alpha):.3f}")
+
+# --- 2. Apply multiple comparison corrections ---
+reject_bonf, _, _, _ = multipletests(p_values_null, alpha=alpha, method='bonferroni')
+reject_fdr, _, _, _ = multipletests(p_values_null, alpha=alpha, method='fdr_bh')
+
+print("2. Multiple comparisons correction (NULL case):")
+print(f"   Proportion significant after Bonferroni: {reject_bonf.mean():.3f}")
+print(f"   Proportion significant after FDR: {reject_fdr.mean():.3f}\n")
+
+# --- 3. Simulate under the ALTERNATIVE (means differ) ---
+def simulate_alt(mean1, mean2, n_sim=1000, n_per_group=30):
+    p_values = []
+    for _ in range(n_sim):
+        sample1 = np.random.normal(loc=mean1, scale=1, size=n_per_group)
+        sample2 = np.random.normal(loc=mean2, scale=1, size=n_per_group)
+        _, p_val = ttest_ind(sample1, sample2)
+        p_values.append(p_val)
+    return np.array(p_values)
+
+# Run for different effect sizes
+effect_sizes = np.linspace(0, 3, 10)
+uncorrected_power = []
+bonf_power = []
+fdr_power = []
+
+for diff in effect_sizes:
+    p_vals_alt = simulate_alt(0, diff, n_sim=n_sim, n_per_group=n_per_group)
+    
+    uncorrected_power.append(np.mean(p_vals_alt < alpha))
+    
+    reject_bonf, _, _, _ = multipletests(p_vals_alt, alpha=alpha, method='bonferroni')
+    reject_fdr, _, _, _ = multipletests(p_vals_alt, alpha=alpha, method='fdr_bh')
+    
+    bonf_power.append(reject_bonf.mean())
+    fdr_power.append(reject_fdr.mean())
+
+# Print results for effect sizes 1, 2, 3
+for diff in [1, 2, 3]:
+    idx = np.where(np.isclose(effect_sizes, diff))[0][0]
+    print(f"3. Alternative hypothesis (means differ by {diff}):")
+    print(f"   Proportion significant (uncorrected): {uncorrected_power[idx]:.3f}")
+    print(f"   Proportion significant after Bonferroni: {bonf_power[idx]:.3f}")
+    print(f"   Proportion significant after FDR: {fdr_power[idx]:.3f}\n")
+
+# --- 4. Plot power curves ---
+plt.figure(figsize=(8,6))
+plt.plot(effect_sizes, uncorrected_power, marker='o', label='Uncorrected')
+plt.plot(effect_sizes, bonf_power, marker='s', label='Bonferroni')
+plt.plot(effect_sizes, fdr_power, marker='^', label='FDR (BH)')
+
+plt.axhline(y=alpha, color='red', linestyle='--', label='alpha=0.05 (Type I error)')
+plt.title("Power vs Effect Size (n=30 per group, 1000 sims)")
+plt.xlabel("Mean difference (effect size)")
+plt.ylabel("Proportion significant (power)")
+plt.legend()
+plt.show()
