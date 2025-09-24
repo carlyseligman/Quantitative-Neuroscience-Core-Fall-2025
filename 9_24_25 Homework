@@ -1,0 +1,89 @@
+import numpy as np
+from scipy import stats
+
+# 1. Define the data arrays for Wing length (X) and Tail length (Y)
+X = np.array([10.4, 10.8, 11.1, 10.2, 10.3, 10.2, 10.7, 10.5, 10.8, 11.2, 10.6, 11.4])
+Y = np.array([7.4, 7.6, 7.9, 7.2, 7.4, 7.1, 7.4, 7.2, 7.8, 7.7, 7.8, 8.3])
+
+# 2. Plot X vs Y to visualize relationship
+import matplotlib.pyplot as plt
+
+plt.scatter(X, Y)
+plt.xlabel('Wing length (cm)')
+plt.ylabel('Tail length (cm)')
+plt.title('Scatter plot of Wing length vs Tail length')
+plt.show()
+
+# 3. Calculate Pearson correlation coefficient using numpy
+r_matrix = np.corrcoef(X, Y)
+r_XY = r_matrix[0, 1]
+r_YX = r_matrix[1, 0]
+
+print(f"r_XY = {r_XY:.3f}, r_YX = {r_YX:.3f}")
+
+# 4. Calculate standard error of r_XY
+n = len(X)
+SE_r = (1 - r_XY**2) / np.sqrt(n - 2)
+print(f"Standard error of r: {SE_r:.4f}")
+
+# 5. Calculate 95% confidence interval using Fisher z-transform
+def fisher_z(r):
+    return 0.5 * np.log((1 + r) / (1 - r))
+
+def fisher_z_inv(z):
+    return (np.exp(2*z) - 1) / (np.exp(2*z) + 1)
+
+z = fisher_z(r_XY)
+SE_z = 1 / np.sqrt(n - 3)
+
+z_lower = z - 1.96 * SE_z
+z_upper = z + 1.96 * SE_z
+
+r_lower = fisher_z_inv(z_lower)
+r_upper = fisher_z_inv(z_upper)
+
+print(f"95% confidence interval for r: [{r_lower:.3f}, {r_upper:.3f}]")
+
+# 6. Test significance of r_XY against null hypothesis H0: r=0 using t-test
+t_stat = r_XY * np.sqrt((n - 2) / (1 - r_XY**2))
+df = n - 2
+p_value = 2 * (1 - stats.t.cdf(abs(t_stat), df))
+print(f"t-statistic: {t_stat:.3f}, p-value: {p_value:.4f}")
+if p_value < 0.05:
+    print("Reject H0: correlation is significant at p<0.05")
+else:
+    print("Fail to reject H0: correlation is not significant")
+
+# 7. Test if our r_XY is significantly different from Yale's r=0.75
+r_yale = 0.75
+z_yale = fisher_z(r_yale)
+
+# Calculate z-test statistic for difference between correlations
+z_test = (z - z_yale) / SE_z
+p_val_yale = 2 * (1 - stats.norm.cdf(abs(z_test)))
+print(f"Test if r = 0.75: z = {z_test:.3f}, p-value = {p_val_yale:.4f}")
+if p_val_yale < 0.05:
+    print("Reject H0: your r is significantly different from 0.75")
+else:
+    print("Fail to reject H0: your r is NOT significantly different from 0.75")
+
+# 8. Power and sample size calculations for detecting r=0.05 with alpha=0.05 and power=0.8
+from statsmodels.stats.power import NormalIndPower, tt_ind_solve_power, TTestPower
+
+# Using Fisher transformation effect size for power analysis
+effect_size = fisher_z(0.05)  # small effect
+alpha = 0.05
+power = 0.8
+
+# Approximate required sample size for correlation test
+# We'll use statsmodels' TTestPower for approximate calculation of correlation power
+power_analysis = TTestPower()
+
+# Calculate sample size
+required_n = power_analysis.solve_power(effect_size=effect_size, alpha=alpha, power=power, alternative='two-sided')
+required_n = int(np.ceil(required_n))
+print(f"Sample size needed to detect r=0.05 with 80% power: {required_n}")
+
+# Calculate power given current sample size (n=12)
+current_power = power_analysis.power(effect_size=effect_size, nobs=12, alpha=alpha, alternative='two-sided')
+print(f"Power to detect r=0.05 with n=12: {current_power:.4f}")
