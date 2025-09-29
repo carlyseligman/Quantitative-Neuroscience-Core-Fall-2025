@@ -1,0 +1,111 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
+import statsmodels.api as sm
+
+# ---------------------------
+# 1. Enter the data
+# ---------------------------
+data = {
+    "Age": [3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17],
+    "WingLength": [1.4, 1.5, 2.2, 2.4, 3.1, 3.2, 3.2, 3.9, 4.1, 4.7, 4.5, 5.2, 5.0]
+}
+df = pd.DataFrame(data)
+
+x = df["Age"].values
+y = df["WingLength"].values
+
+# ---------------------------
+# 2. Fit linear regression
+# ---------------------------
+slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+
+# regression line
+line = slope * x + intercept
+
+# ---------------------------
+# 1 & 2. Plot data + regression line
+# ---------------------------
+plt.scatter(x, y, label="Data", color="blue")
+plt.plot(x, line, color="red", label=f"y={slope:.2f}x+{intercept:.2f}")
+plt.xlabel("Age")
+plt.ylabel("Wing Length")
+plt.legend()
+plt.title("Age vs Wing Length with Regression Line")
+plt.show()
+
+# ---------------------------
+# 3. Hypothesis test H0: b=0
+# ---------------------------
+print("Slope:", slope)
+print("p-value for slope (H0: b=0):", p_value)
+
+# ---------------------------
+# 4. Confidence intervals on slope
+# ---------------------------
+alpha = 0.05
+df_resid = len(x) - 2
+t_crit = stats.t.ppf(1 - alpha/2, df_resid)
+ci_low = slope - t_crit * std_err
+ci_high = slope + t_crit * std_err
+print(f"95% CI for slope: [{ci_low:.4f}, {ci_high:.4f}]")
+
+# visualize confidence intervals
+X = sm.add_constant(x)
+model = sm.OLS(y, X).fit()
+pred = model.get_prediction(X)
+pred_ci = pred.conf_int()
+
+plt.scatter(x, y, label="Data", color="blue")
+plt.plot(x, model.fittedvalues, 'r', label="Regression line")
+plt.fill_between(x, pred_ci[:,0], pred_ci[:,1], color='gray', alpha=0.3, label="95% CI")
+plt.xlabel("Age")
+plt.ylabel("Wing Length")
+plt.legend()
+plt.title("Regression with 95% CI")
+plt.show()
+
+# ---------------------------
+# 5. R-squared
+# ---------------------------
+print("R-squared:", r_value**2)
+
+# ---------------------------
+# 6. Pearson's r
+# ---------------------------
+pearson_r, pearson_p = stats.pearsonr(x, y)
+print("Pearson's r:", pearson_r)
+print("p-value for Pearson's r:", pearson_p)
+
+# ---------------------------
+# 7. Add noise and see effect
+# ---------------------------
+np.random.seed(42)
+y_noisy = y + np.random.normal(0, 0.5, size=len(y))
+
+slope_n, intercept_n, r_value_n, p_value_n, std_err_n = stats.linregress(x, y_noisy)
+line_noisy = slope_n * x + intercept_n
+
+plt.scatter(x, y_noisy, label="Noisy data", color="purple")
+plt.plot(x, line_noisy, 'orange', label=f"Noisy fit: y={slope_n:.2f}x+{intercept_n:.2f}")
+plt.xlabel("Age")
+plt.ylabel("Wing Length (Noisy)")
+plt.legend()
+plt.title("Regression with Noise")
+plt.show()
+
+print("Slope with noise:", slope_n)
+print("R-squared with noise:", r_value_n**2)
+print("Pearson's r with noise:", r_value_n)
+
+# ---------------------------
+# 8. Residual plot
+# ---------------------------
+residuals = y - line
+plt.scatter(x, residuals, color="green")
+plt.axhline(0, color="black", linestyle="--")
+plt.xlabel("Age")
+plt.ylabel("Residuals")
+plt.title("Residual Plot")
+plt.show()
