@@ -1,0 +1,212 @@
+# =============================================================================
+# Python translation of: laterTutorial_plotExampleData.m
+# =============================================================================
+# This script replicates the MATLAB tutorial demonstrating the LATER model
+# (Linear Approach to Threshold with Ergodic Rate) using reaction time (RT)
+# data. It shows:
+#   1. RT and 1/RT histograms
+#   2. How to construct reciprobit plots
+#   3. The final reciprobit plots for multiple conditions
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Imports
+# -----------------------------------------------------------------------------
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+# -----------------------------------------------------------------------------
+# Helper function: simulate or load RT data
+# -----------------------------------------------------------------------------
+def later_getData():
+    """
+    Placeholder for loading RT data (e.g., from Kim et al., J. Neuroscience).
+    Here we simulate data roughly similar to that used in the MATLAB tutorial.
+    Returns:
+        data   - list of numpy arrays (each condition's RTs)
+        labels - list of condition names
+    """
+    np.random.seed(42)  # for reproducibility (same random data every run)
+
+    # Generate four sets of RT data (in seconds)
+    # Each condition has a slightly slower mean RT and broader spread
+    data = [
+        np.random.normal(0.3, 0.05, 200),   # fast condition
+        np.random.normal(0.4, 0.07, 200),   # medium condition
+        np.random.normal(0.5, 0.08, 200),   # slow condition
+        np.random.normal(0.6, 0.1, 200)     # very slow condition
+    ]
+
+    # Remove any invalid (negative) reaction times
+    data = [d[d > 0] for d in data]
+
+    # Labels for each condition
+    labels = ['Fast', 'Medium', 'Slow', 'Very Slow']
+
+    return data, labels
+
+
+# -----------------------------------------------------------------------------
+# Helper function: standardized histogram plotting
+# -----------------------------------------------------------------------------
+def later_plotHistogram(values, bins, xlabel):
+    """
+    Draws a gray histogram with black edges and labeled x-axis.
+    Mimics the MATLAB later_plotHistogram() helper.
+    """
+    plt.hist(values, bins=bins, color='gray', edgecolor='black')
+    plt.xlabel(xlabel)
+    plt.ylabel('Count')
+    plt.tight_layout()
+
+
+# -----------------------------------------------------------------------------
+# 1. Load the raw data
+# -----------------------------------------------------------------------------
+data, labels = later_getData()
+
+# -----------------------------------------------------------------------------
+# 2. Plot RT distributions (like MATLAB figure 1)
+# -----------------------------------------------------------------------------
+plt.figure(figsize=(10, 12))  # open new figure with a grid layout
+
+# Define histogram bins
+rtBins = np.arange(0, 1.2 + 0.02, 0.02)   # bins for RT in seconds
+rrtBins = np.arange(0, 10.0 + 0.2, 0.2)   # bins for reciprocal RT (1/sec)
+
+# --- Top row: all trials combined ---
+plt.subplot(5, 2, 1)  # top-left subplot
+later_plotHistogram(np.concatenate(data), rtBins, 'RT (sec)')
+
+plt.subplot(5, 2, 2)  # top-right subplot
+later_plotHistogram(1.0 / np.concatenate(data), rrtBins, '1/RT (1/sec)')
+
+# --- Loop through each condition and plot its histograms ---
+for ii, label in enumerate(labels):
+    plt.subplot(5, 2, 3 + ii * 2)   # left column: RT
+    later_plotHistogram(data[ii], rtBins, label)
+
+    plt.subplot(5, 2, 4 + ii * 2)   # right column: 1/RT
+    later_plotHistogram(1.0 / data[ii], rrtBins, label)
+
+# --- Bottom row labels (shared x/y axes) ---
+plt.subplot(5, 2, 9)
+plt.xlabel('RT (sec)')
+plt.ylabel('Count')
+
+plt.subplot(5, 2, 10)
+plt.xlabel('1/RT (1/sec)')
+
+plt.tight_layout()
+plt.show()
+
+
+# -----------------------------------------------------------------------------
+# 3. Demonstrate reciprobit plotting steps
+# -----------------------------------------------------------------------------
+plt.figure(figsize=(10, 12))
+
+# Take one dataset as an example (first condition)
+rts = np.sort(data[0])          # sort RTs
+n = len(rts)                    # number of trials
+cumprob = np.arange(1, n + 1) / n  # empirical cumulative probabilities
+probit_cumprob = norm.ppf(cumprob, 0, 1)  # convert cumulative probs to probit (z-scores)
+
+# --- (1a) Probability to probit conversion ---
+plt.subplot(4, 3, 1)
+plt.plot(cumprob, probit_cumprob, 'k-', lw=2)
+plt.plot([0, 1], [-1, -1], 'r-')   # ±1 SD lines
+plt.plot([0, 1], [1, 1], 'r-')
+plt.plot([0.5 - 0.34, 0.5 + 0.34], [-1, 1], 'gx', ms=10)
+plt.xlabel('Cum prob')
+plt.ylabel('Cum prob (probit)')
+
+# --- (1b) Ideal Gaussian CDF (probability scale) ---
+x = np.arange(-5, 5, 0.01)
+plt.subplot(4, 3, 2)
+plt.plot(x, norm.cdf(x, 0, 1), 'k-')
+plt.xlabel('Value')
+plt.ylabel('Cum prob')
+
+# --- (1c) Ideal Gaussian CDF (probit scale) ---
+plt.subplot(4, 3, 3)
+plt.plot(x, norm.ppf(norm.cdf(x, 0, 1), 0, 1), 'k-')
+plt.xlabel('Value')
+plt.ylabel('Cum prob (probit)')
+
+# --- (2) Empirical cumulative RT distribution ---
+plt.subplot(4, 1, 2)
+plt.plot(rts, cumprob, 'ko-')
+plt.xlabel('RT (sec)')
+plt.ylabel('Cum prob')
+
+# --- (3) Empirical cumulative of -1/RT ---
+plt.subplot(4, 1, 3)
+plt.plot(-1.0 / rts, cumprob, 'ko-')
+plt.xlabel('-1/RT (1/sec)')
+plt.ylabel('Cum prob')
+
+# --- (4) -1/RT cumulative on probit scale (Reciprobit) ---
+plt.subplot(4, 1, 4)
+plt.plot(-1.0 / rts, probit_cumprob, 'ko')
+plt.grid(True)
+
+# Define tick mark positions and labels (as in MATLAB)
+express_cutoff = 200  # in ms
+XTickLabels = np.array([100, express_cutoff, 2500])     # RT labels (ms)
+XTickValues = -1000.0 / XTickLabels                     # convert to -1/RT scale
+YTickLabels = np.array([0.1, 1, 5, 10, 50, 90, 95, 99, 99.9])
+YTickValues = norm.ppf(YTickLabels / 100, 0, 1)         # convert probabilities to probit
+
+# Apply tick labels and limits
+plt.yticks(YTickValues, YTickLabels)
+plt.xticks(XTickValues, XTickLabels)
+plt.xlim(XTickValues[0], XTickValues[-1])
+plt.ylim(YTickValues[0], YTickValues[-1])
+plt.xlabel('RT (ms)')
+plt.ylabel('Cum prob')
+plt.tight_layout()
+plt.show()
+
+
+# -----------------------------------------------------------------------------
+# 4. Full reciprobit plot for all data sets
+# -----------------------------------------------------------------------------
+plt.figure(figsize=(8, 6))
+colors = ['b', 'r', 'y', 'm']      # colors for each dataset
+express_cutoff_sec = 0.2           # 200 ms cutoff in seconds
+plot_handles = []                  # store for legend handles
+
+# --- Loop through all datasets ---
+for ii, label in enumerate(labels):
+    rts_sorted = np.sort(data[ii])                       # sort RTs
+    n = len(rts_sorted)
+    cumprob = np.arange(1, n + 1) / n                    # cumulative probabilities
+    probit_cumprob = norm.ppf(cumprob, 0, 1)             # probit transform
+    express_mask = rts_sorted < express_cutoff_sec        # flag express saccades (<200 ms)
+
+    # Plot express saccades as 'x'
+    plt.plot(-1.0 / rts_sorted[express_mask], probit_cumprob[express_mask],
+             'x', color=colors[ii], ms=8)
+
+    # Plot non-express saccades as filled circles
+    h, = plt.plot(-1.0 / rts_sorted[~express_mask], probit_cumprob[~express_mask],
+                  'o', color=colors[ii], mfc=colors[ii], ms=5, label=label)
+    plot_handles.append(h)
+
+# --- Format axes and legend ---
+plt.grid(True)
+plt.yticks(YTickValues, YTickLabels)
+plt.xticks(XTickValues, XTickLabels)
+plt.xlim(XTickValues[0], XTickValues[-1])
+plt.ylim(YTickValues[0], YTickValues[-1])
+plt.xlabel('RT (ms)')
+plt.ylabel('Cum prob')
+plt.legend(plot_handles, labels, loc='upper left')
+plt.tight_layout()
+plt.show()
+
+# =============================================================================
+# End of script
+# =============================================================================
