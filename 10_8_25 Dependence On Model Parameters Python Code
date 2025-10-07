@@ -1,0 +1,144 @@
+# laterTutorial_dependenceOnModelParameters.py
+#
+# Python translation of MATLAB script for examining LATER model parameters.
+# The LATER (Linear Approach to Threshold with Ergodic Rate) model describes
+# saccadic decision times as a result of a decision variable rising linearly
+# to a threshold at a stochastic rate.
+#
+# Author (MATLAB version): Joshua I. Gold
+# Python translation and comments: ChatGPT (2025)
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+# ----------------------------
+# Simulate LATER model RT data
+# ----------------------------
+
+# Model parameters
+muR = 4      # Mean rise rate (decision signal speed)
+stdR = 1     # Standard deviation of rise rate
+deltaS = 1.2 # Distance from starting point to decision threshold
+
+# Number of simulated trials
+N = 10000
+
+# Reaction time: RT = distance / rate
+# Rate is drawn from a Gaussian distribution
+rise_rates = np.random.normal(muR, stdR, N)
+RT = deltaS / rise_rates
+
+# ----------------------------
+# Plot RT histogram
+# ----------------------------
+plt.figure(figsize=(8, 10))
+
+plt.subplot(3, 1, 1)
+plt.hist(RT, bins=np.arange(0, 2.01, 0.01))
+plt.xlim(0, 2.0)
+plt.xlabel('RT (sec)')
+plt.ylabel('Count')
+plt.title('Simulated Reaction Times (LATER model)')
+
+# ----------------------------
+# Compute reciprobit transform
+# ----------------------------
+# Sort RTs, convert to reciprocal, and compute z-scores of cumulative probs
+RT_sorted = np.sort(RT)
+x_values = -1 / RT_sorted
+y_values = norm.ppf(np.arange(1, N + 1) / N)
+
+# ----------------------------
+# Plot reciprobit without relabeling
+# ----------------------------
+plt.subplot(3, 1, 2)
+plt.plot(x_values, y_values, 'k.', markersize=1)
+plt.xlabel('-1/RT (sec)')
+plt.ylabel('z score')
+
+xlm = plt.xlim()
+ylm = plt.ylim()
+
+# ----------------------------
+# Plot reciprobit with labeled axes
+# ----------------------------
+plt.subplot(3, 1, 3)
+plt.plot(x_values, y_values, 'k.', markersize=1)
+plt.xlim(xlm)
+plt.ylim(ylm)
+
+# Customize tick labels for reciprobit scaling
+XTickLabels = [200, 500, 1000, 2000]
+XTickValues = -1000 / np.array(XTickLabels)
+
+YTickLabels = [0.1, 10, 50, 90, 99.9]
+YTickValues = norm.ppf(np.array(YTickLabels) / 100)
+
+plt.xticks(XTickValues, XTickLabels)
+plt.yticks(YTickValues, YTickLabels)
+plt.xlabel('RT (ms)')
+plt.ylabel('Cumulative Probability')
+
+# ----------------------------
+# Overlay analytic solution
+# ----------------------------
+for ax_index in [1, 2]:
+    plt.subplot(3, 1, ax_index + 1)
+
+    # Mean of -1/RT distribution
+    x_intercept = -muR / deltaS
+    plt.plot([xlm[0], x_intercept], [0, 0], 'r-')         # x-axis line
+    plt.plot([x_intercept, x_intercept], [ylm[0], 0], 'r-') # vertical line
+    plt.plot(x_intercept, 0, 'ro')                         # intersection point
+
+    # Visualize 1 SD increment in z-score
+    plt.plot([x_intercept, x_intercept + 1/deltaS], [0, 1],
+             'r-', linewidth=2)
+
+    # Analytic straight-line solution: y = deltaS * x + muR
+    xRT = np.array([0.1, 1.0])
+    reci_xRT = -1 / xRT
+    plt.plot(reci_xRT, reci_xRT * deltaS + muR, 'g-')
+
+plt.tight_layout()
+
+# ----------------------------
+# Vary muR and deltaS
+# ----------------------------
+plt.figure(figsize=(8, 8))
+
+xRT = np.array([0.2, 4.0])
+reci_xRT = -1 / xRT
+muRs = np.arange(1, 9)
+deltaSs = np.arange(0.5, 2.1, 0.1)
+
+# (1) Vary muR, fixed deltaS
+plt.subplot(2, 1, 1)
+for mu in muRs:
+    plt.plot(reci_xRT, reci_xRT * deltaS + mu, 'k-')
+plt.title('Effect of varying mean rise rate (muR)')
+plt.ylabel('z score')
+
+# (2) Vary deltaS, fixed muR
+plt.subplot(2, 1, 2)
+for dS in deltaSs:
+    plt.plot(reci_xRT, reci_xRT * dS + muR, 'k-')
+plt.title('Effect of varying threshold distance (deltaS)')
+plt.xlabel('-1/RT (sec)')
+plt.ylabel('z score')
+
+# Format axes to match reciprobit conventions
+for i in range(1, 3):
+    plt.subplot(2, 1, i)
+    XTickLabels = [200, 500, 1000, 2000]
+    XTickValues = -1000 / np.array(XTickLabels)
+    YTickLabels = [0.001, 0.1, 10, 50, 90, 99.9, 99.999]
+    YTickValues = norm.ppf(np.array(YTickLabels) / 100)
+    plt.xticks(XTickValues, XTickLabels)
+    plt.yticks(YTickValues, YTickLabels)
+    plt.xlabel('RT (ms)')
+    plt.ylabel('Cumulative Probability')
+
+plt.tight_layout()
+plt.show()
