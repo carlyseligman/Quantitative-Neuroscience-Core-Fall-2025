@@ -1,0 +1,101 @@
+import numpy as np
+from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+# ---------------------------------------------------------------
+# 1. Generate or Load Data
+# ---------------------------------------------------------------
+# In MATLAB, later_getData returns cleaned RTs (reaction times)
+# Here, we’ll simulate RTs as if they came from a LATER process
+# (You can replace this with your actual data array)
+np.random.seed(0)
+true_muR = 5      # true mean rate of rise
+true_deltaS = 2    # true threshold separation
+n_trials = 300
+
+# 1/RT is Gaussian distributed: mu = muR/deltaS, sigma = 1/deltaS
+mu = true_muR / true_deltaS
+sigma = 1 / true_deltaS
+
+recip_rt = np.random.normal(mu, sigma, n_trials)  # 1/RT samples
+RTs = 1 / recip_rt                                 # Convert back to RTs
+RTs = RTs[RTs > 0]                                 # Remove impossible (negative) RTs
+
+# ---------------------------------------------------------------
+# 2. Define the Objective Function (Negative Log-Likelihood)
+# ---------------------------------------------------------------
+def later_neg_log_likelihood(fits, RTs):
+    """
+    Compute negative log likelihood for LATER model given parameters.
+    fits: [muR, deltaS]
+    RTs: observed reaction times
+    """
+    muR, deltaS = fits
+    if muR <= 0 or deltaS <= 0:
+        return np.inf  # invalid parameter region
+    
+    mu = muR / deltaS
+    sigma = 1 / deltaS
+
+    # likelihood of each RT (Gaussian in reciprocal RT)
+    invRT = 1 / RTs
+    likelihoods = norm.pdf(invRT, mu, sigma)
+    
+    # Avoid log(0) by replacing zeros with tiny values
+    likelihoods[likelihoods == 0] = 1e-12
+    nll = -np.sum(np.log(likelihoods))
+    return nll
+
+# Example check:
+# later_neg_log_likelihood([true_muR, true_deltaS], RTs)
+
+# ---------------------------------------------------------------
+# 3. Define initial conditions and bounds
+# ---------------------------------------------------------------
+lower_bounds = [0.001, 0.001]
+upper_bounds = [1000, 1000]
+
+# Good initial guesses: use sample mean and SD of reciprocal RTs
+invRTs = 1 / RTs
+mean_invRT = np.mean(invRTs)
+std_invRT = np.std(invRTs)
+
+initial_muR = mean_invRT / std_invRT
+initial_deltaS = 1 / std_invRT
+initial_values = [initial_muR, initial_deltaS]
+
+# ---------------------------------------------------------------
+# 4. Run the fits (optimization)
+# ---------------------------------------------------------------
+result = minimize(
+    later_neg_log_likelihood,
+    x0=initial_values,
+    args=(RTs,),
+    method='L-BFGS-B',  # Like fmincon with bounds
+    bounds=[lower_bounds, upper_bounds],
+    options={'maxiter': 3000}
+)
+
+fitted_muR, fitted_deltaS = result.x
+nllk = result.fun
+
+# ---------------------------------------------------------------
+# 5. Evaluate the fits
+# ---------------------------------------------------------------
+print(f"Fitted muR: {fitted_muR:.4f}")
+print(f"Fitted deltaS: {fitted_deltaS:.4f}")
+print(f"Negative Log-Likelihood: {nllk:.4f}")
+
+# Compare to true values
+print(f"True muR: {true_muR}, True deltaS: {true_deltaS}")
+
+# Optional: visualize reciprocal RT distribution and fitted Gaussian
+plt.hist(1/RTs, bins=30, density=True, alpha=0.5, label='Data (1/RT)')
+x = np.linspace(min(1/RTs), max(1/RTs), 200)
+plt.plot(x, norm.pdf(x, fitted_muR/fitted_deltaS, 1/fitted_deltaS), 'r-', label='Fitted Gaussian')
+plt.xlabel('1 / RT')
+plt.ylabel('Probability Density')
+plt.legend()
+plt.title('LATER Model Fit to RT Data')
+plt.show()
