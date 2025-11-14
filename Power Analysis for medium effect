@@ -1,0 +1,20 @@
+from statsmodels.stats.power import TTestIndPower
+
+# Parameters
+alpha = 0.05          # significance level
+power = 0.80          # desired power
+effect_size = 0.5     # Cohen's d (medium)
+ratio = 1.0           # equal-sized groups
+
+# Create power analysis object
+analysis = TTestIndPower()
+
+# Compute required sample size per group
+n_per_group = analysis.solve_power(effect_size=effect_size,
+                                   alpha=alpha,
+                                   power=power,
+                                   ratio=ratio,
+                                   alternative='two-sided')
+
+print(f"Required sample size per group: {n_per_group:.2f}")
+print(f"Total sample size: {2 * n_per_group:.2f}")
