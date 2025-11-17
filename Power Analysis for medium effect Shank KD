@@ -1,0 +1,19 @@
+from statsmodels.stats.power import FTestAnovaPower
+
+# PARAMETERS
+alpha = 0.05        # significance level
+power = 0.80        # desired power
+k_groups = 3        # number of groups
+effect_size = 0.5  # Cohen's f (change this!)
+
+analysis = FTestAnovaPower()
+
+# Compute sample size per group
+n_per_group = analysis.solve_power(effect_size=effect_size,
+                                   nobs=None,
+                                   alpha=alpha,
+                                   power=power,
+                                   k_groups=k_groups)
+
+print(f"Required sample size per group: {n_per_group:.2f}")
+print(f"Total sample size: {n_per_group * k_groups:.2f}")
